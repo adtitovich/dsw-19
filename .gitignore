@@ -1,0 +1,6 @@
+*.sw?
+*.iml
+*.DS_Store
+.idea/
+target/
+.gradle
