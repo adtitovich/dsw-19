@@ -7,4 +7,4 @@
 docker-compose.yml - Docker Compose for Confluent Platform  with Redpanda Console<br>
 alert_topic.png - пример выполнения<br>
 
-приложение создано на основе https://github.com/netology-ds-team/kafka-streams-practice <br>
+SumAlertsApp.java создано на основе https://github.com/netology-ds-team/kafka-streams-practice <br>
