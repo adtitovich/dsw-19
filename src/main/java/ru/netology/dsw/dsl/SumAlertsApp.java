@@ -20,15 +20,13 @@ import java.util.concurrent.CountDownLatch;
 
 /**
  * Приложениена Kafka Streams, которое будет отправлять сообщение-алерт, если сумма денег заработанных по этому продукту 
- * (для каждой покупки сумма - это purchase.quantity * product.price) за последнюю минуту больше MAX_PURCHASES_PER_MINUTE 3 000.
+ * (для каждой покупки сумма - это purchase.quantity * product.price) за последнюю минуту больше MAX_PURCHASES_PER_MINUTE = 3 000.
  */
 public class SumAlertsApp {
     public static final String PRODUCT_TOPIC_NAME = "products";
     public static final String PURCHASE_TOPIC_NAME = "purchases";
     public static final String RESULT_TOPIC = "product_sum_alerts-dsl";
- //   public static final String RESULT_TOPIC = "purchase_with_joined_product-dsl";
     public static final String DLQ_TOPIC = "purchases_product_join_dlq-dsl";
-  //  private static final long MAX_PURCHASES_PER_MINUTE = 10L;
     private static final double MAX_AMOUNT_PER_MINUTE = 3000.0;
 
     public static void main(String[] args) throws InterruptedException {
@@ -105,7 +103,7 @@ public class SumAlertsApp {
         purchaseWithJoinedProduct
         // фильтруем только неуспешные записи
         .filter((key, val) -> !val.success)
-        // используем именно метод mapValues, потому что он не может вызвать репартиционирования (см 2-ю лекцию)
+        // используем именно метод mapValues, потому что он не может вызвать репартиционирования
         .mapValues(val -> val.result)
         // записываем сообщение с ошибкой в dlq топик (dead letter queue) - очередь недоставленных сообщений
         .to(DLQ_TOPIC, Produced.with(new Serdes.StringSerde(), avroSerde));
@@ -115,9 +113,9 @@ public class SumAlertsApp {
         purchaseWithJoinedProduct
         // фильтруем только успешные записи
         .filter((key, val) -> val.success)
-        // используем именно метод mapValues, потому что он не может вызвать репартиционирования (см 2-ю лекцию)
+        // используем именно метод mapValues, потому что он не может вызвать репартиционирования
         .mapValues(val -> val.result)
-        // записываем успешные сообщения в результирующий топик
+        // берем только успешные сообщения
         .groupBy((key, val) -> val.get("product_id").toString(), Grouped.with(new Serdes.StringSerde(), avroSerde))
             .windowedBy(
                 // объединяем записи в рамках минуты
@@ -162,7 +160,6 @@ public class SumAlertsApp {
                     .requiredLong("product_id")
                     .requiredString("product_name")
                     .requiredDouble("product_price")
- //                   .requiredDouble("amount_money")
                     .endRecord();
             GenericRecord result = new GenericData.Record(schema);
             // копируем в наше сообщение нужные поля из сообщения о покупке
@@ -172,8 +169,6 @@ public class SumAlertsApp {
             // копируем в наше сообщение нужные поля из сообщения о товаре
             result.put("product_name", product.get("name"));
             result.put("product_price", product.get("price"));
-//            System.out.println( (double) product.get("price") * ((Long) purchase.get("quantity")).doubleValue());
-//            result.put("amount_money",  ((double) product.get("price")) * ((Long) purchase.get("quantity")).doubleValue() );
             return new JoinResult(true, result, null);
         } catch (Exception e) {
             return new JoinResult(false, purchase, e.getMessage());
